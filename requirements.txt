@@ -6,3 +6,4 @@ tiktoken==0.7.0
 fastembed==0.3.0
 fpdf==1.7.2
 python-dateutil==2.9.0
+onnxruntime==1.17.3
