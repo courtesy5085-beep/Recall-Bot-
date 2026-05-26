@@ -1,8 +1,3 @@
-"""
-RecallBot — AI memory for team chats.
-Upload WhatsApp/Slack exports, index them, and ask questions with cited answers.
-"""
-
 from __future__ import annotations
 
 import json
@@ -360,7 +355,7 @@ def get_embedding_model() -> TextEmbedding:
 
 def get_openai_client() -> OpenAI:
     """Return an OpenAI client using secrets."""
-    key = st.secrets.get("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+    key = st.secrets.get("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", os.environ.get("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", ""))
     if not key:
         st.error("OpenAI API key not found. Add OPENAI_API_KEY to st.secrets or environment.")
         st.stop()
