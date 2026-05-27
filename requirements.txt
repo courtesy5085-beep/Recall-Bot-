@@ -6,3 +6,6 @@ fastembed==0.3.0
 fpdf==1.7.2
 streamlit-extras==0.4.3
 python-dateutil==2.9.0
+onnxruntime==1.18.1
+numpy==1.26.4
+pysqlite3-binary==0.5.3
