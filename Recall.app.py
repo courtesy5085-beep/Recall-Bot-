@@ -125,7 +125,7 @@ conn.commit()
 # =========================
 
 try:
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    client = OpenAI(api_key=st.secrets["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"])
 except:
     st.error("Add OPENAI_API_KEY in Streamlit secrets.")
     st.stop()
