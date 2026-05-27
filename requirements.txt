@@ -1,11 +1,11 @@
 streamlit==1.35.2
-chromadb==0.5.4
+chromadb==0.4.24
 openai==1.40.0
 tiktoken==0.7.0
-fastembed==0.3.0
 fpdf==1.7.2
 streamlit-extras==0.4.3
 python-dateutil==2.9.0
-onnxruntime==1.18.1
+sentence-transformers==2.7.0
+torch==2.2.2
 numpy==1.26.4
 pysqlite3-binary==0.5.3
