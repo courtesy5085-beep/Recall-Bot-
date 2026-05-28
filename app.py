@@ -1,8 +1,3 @@
-"""
-RecallBot — AI memory assistant for team chats.
-Single-file Streamlit app. Production-ready, Streamlit-Cloud deployable.
-"""
-
 from __future__ import annotations
 
 import hashlib
