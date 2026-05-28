@@ -42,7 +42,7 @@ def get_openai_key() -> str | None:
     key = os.environ.get("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")
     if not key:
         try:
-            key = st.secrets.get("OPENAI_API_KEY")  # type: ignore[attr-defined]
+            key = st.secrets.get("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")  # type: ignore[attr-defined]
         except Exception:
             key = None
     return key
