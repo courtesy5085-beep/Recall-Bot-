@@ -315,26 +315,7 @@ def parse_slack_zip(file_bytes: bytes, source: str) -> list[dict]:
     return out
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Vector engine — ChromaDB + Sentence Transformers
-# ──────────────────────────────────────────────────────────────────────────────
-@st.cache_resource(show_spinner=False)
-def get_embedder():
-    from sentence_transformers import SentenceTransformer
-    return SentenceTransformer(EMBED_MODEL)
-
-
-@st.cache_resource(show_spinner=False)
-def get_chroma():
-    import chromadb
-    from chromadb.config import Settings
-    return chromadb.PersistentClient(path=CHROMA_PATH, settings=Settings(anonymized_telemetry=False))
-
-
-def user_collection(user_id: int):
-    client = get_chroma()
-    return client.get_or_create_collection(
-        name=f"user_{user_id}", metadata={"hnsw:space": "cosine"}
+={"hnsw:space": "cosine"}
     )
 
 
@@ -343,102 +324,21 @@ def chunk_messages(messages: list[dict], chunk_chars: int = 900, overlap: int = 
     from langchain_text_splitters import RecursiveCharacterTextSplitter
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_chars, chunk_overlap=overlap)
 
-    buf: list[dict] = []
-    buf_len = 0
-    chunks: list[dict] = []
+    
+        import numpy as np
+from openai import OpenAI
+client = OpenAI()
 
-    def flush():
-        nonlocal buf, buf_len
-        if not buf:
-            return
-        body = "\n".join(f"[{m['ts']}] {m['sender']}: {m['text']}" for m in buf)
-        for piece in splitter.split_text(body):
-            chunks.append({
-                "id": str(uuid.uuid4()),
-                "text": piece,
-                "msg_ids": ",".join(m["id"] for m in buf),
-                "senders": ", ".join(sorted({m["sender"] for m in buf})),
-                "first_ts": buf[0]["ts"],
-                "last_ts": buf[-1]["ts"],
-                "source": buf[0]["source"],
-            })
-        buf, buf_len = [], 0
+def embed(texts: list[str]) -> np.ndarray:
+    r = client.embeddings.create(model="text-embedding-3-small", input=texts)
+    return np.array([d.embedding for d in r.data], dtype=np.float32)
 
-    for m in messages:
-        buf.append(m)
-        buf_len += len(m["text"])
-        if buf_len >= chunk_chars:
-            flush()
-    flush()
-    return chunks
+def search(query: str, vectors: np.ndarray, docs: list[dict], k=8):
+    q = embed([query])[0]
+    sims = vectors @ q / (np.linalg.norm(vectors, axis=1) * np.linalg.norm(q) + 1e-9)
+    idx = np.argsort(-sims)[:k]
+    return [docs[i] | {"score": float(sims[i])} for i in idx]
 
-
-def index_messages(user_id: int, messages: list[dict], progress=None) -> int:
-    if not messages:
-        return 0
-    coll = user_collection(user_id)
-    embedder = get_embedder()
-    chunks = chunk_messages(messages)
-    if not chunks:
-        return 0
-    BATCH = 64
-    for i in range(0, len(chunks), BATCH):
-        batch = chunks[i:i + BATCH]
-        embeddings = embedder.encode([c["text"] for c in batch], show_progress_bar=False).tolist()
-        coll.add(
-            ids=[c["id"] for c in batch],
-            embeddings=embeddings,
-            documents=[c["text"] for c in batch],
-            metadatas=[{
-                "msg_ids": c["msg_ids"],
-                "senders": c["senders"],
-                "first_ts": c["first_ts"],
-                "last_ts": c["last_ts"],
-                "source": c["source"],
-            } for c in batch],
-        )
-        if progress is not None:
-            progress.progress(min(1.0, (i + BATCH) / len(chunks)))
-    # Persist a copy of raw messages for analytics in session
-    st.session_state.setdefault("raw_messages", []).extend(messages)
-    return len(chunks)
-
-
-def semantic_search(user_id: int, query: str, k: int = 6,
-                    sender: str | None = None,
-                    date_from: date | None = None,
-                    date_to: date | None = None) -> list[dict]:
-    coll = user_collection(user_id)
-    try:
-        emb = get_embedder().encode([query]).tolist()
-        res = coll.query(query_embeddings=emb, n_results=max(k * 3, k))
-    except Exception:
-        return []
-    hits: list[dict] = []
-    docs = res.get("documents", [[]])[0]
-    metas = res.get("metadatas", [[]])[0]
-    dists = res.get("distances", [[None] * len(docs)])[0]
-    for doc, meta, dist in zip(docs, metas, dists):
-        meta = meta or {}
-        if sender and sender.lower() not in (meta.get("senders") or "").lower():
-            continue
-        ts_str = meta.get("first_ts") or ""
-        try:
-            ts_date = datetime.fromisoformat(ts_str).date() if ts_str else None
-        except ValueError:
-            ts_date = None
-        if date_from and ts_date and ts_date < date_from:
-            continue
-        if date_to and ts_date and ts_date > date_to:
-            continue
-        hits.append({
-            "text": doc,
-            "meta": meta,
-            "score": 1 - (dist if dist is not None else 1),
-        })
-        if len(hits) >= k:
-            break
-    return hits
 
 
 # ──────────────────────────────────────────────────────────────────────────────
