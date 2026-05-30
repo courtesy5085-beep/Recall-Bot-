@@ -1,0 +1,14 @@
+streamlit>=1.32.0
+openai>=1.14.0
+chromadb>=0.4.22
+sentence-transformers>=2.5.1
+langchain>=0.1.12
+langchain-text-splitters>=0.0.1
+rank-bm25>=0.2.2
+pandas>=2.2.0
+numpy>=1.26.0
+plotly>=5.19.0
+python-dotenv>=1.0.1
+tiktoken>=0.6.0
+Pillow>=10.2.0
+bcrypt>=4.1.2
